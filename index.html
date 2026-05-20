@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full w-full overflow-hidden select-none">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>UTECH Калькулятор</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
+    <style>
+        /* Нативная фиксация интерфейса */
+        html, body {
+            overflow-x: hidden;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #F8F9FA;
+            overscroll-behavior-y: none;
+            overscroll-behavior-x: none;
+            -webkit-tap-highlight-color: transparent;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Мягкий инерционный скролл */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; 
+        }
+
+        /* ИДЕАЛЬНЫЙ ТОЛСТЫЙ ПОЛЗУНОК */
+        input[type=range] { 
+            -webkit-appearance: none; 
+            width: 100%; 
+            height: 8px; /* Толстый красивый трек */
+            border-radius: 4px;
+            background: #E5E7EB; /* Базовый цвет (перекрывается через JS) */
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; 
+            height: 28px; 
+            width: 28px;
+            border-radius: 50%; 
+            background: #891E2B; 
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(137, 30, 43, 0.4);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); }
+
+        /* Анимации */
+        .page-fade-in { animation: pageFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes pageFadeIn {
+            from { opacity: 0; transform: translateX(10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .scrollable-content {
+            height: calc(100vh - 60px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 40px;
+        }
+    </style>
+</head>
+<body class="text-gray-900 antialiased">
+
+    <header class="bg-white sticky top-0 z-50 flex justify-between items-center px-4 h-[60px] shadow-sm border-b border-gray-100">
+        <button id="header-back-btn" onclick="goToInputPage()" class="w-10 h-10 flex items-center justify-start text-gray-800 opacity-0 pointer-events-none transition-opacity duration-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+        <h1 class="text-[#891E2B] uppercase select-none" style="font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 21px; letter-spacing: 0.08em; line-height: 1;">UTECH</h1>
+        <button class="w-10 h-10 flex items-center justify-end text-gray-800">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+    </header>
+
+    <div id="page-input" class="scrollable-content w-full absolute top-[60px] left-0">
+        <div class="max-w-md mx-auto p-4">
+            
+            <h2 class="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-4">РАСЧЕТ ХИМИЧЕСКОГО СОСТАВА</h2>
+
+            <section class="mb-6">
+                <h3 class="text-base font-bold text-gray-800 mb-2.5">Область применения</h3>
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center border border-gray-200/60">
+                        <div class="w-8 h-4 bg-gray-400/30 rounded transform -rotate-12"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-800 text-sm">Бетон</h4>
+                        <p class="text-xs text-gray-400 font-medium mt-0.5">Класс B25-B60</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-6">
+                <h3 class="text-base font-bold text-gray-800 mb-2.5">Химический анкер</h3>
+                <div class="flex gap-2.5 no-scrollbar w-full overflow-x-auto pb-2" id="anchors-container"></div>
+            </section>
+
+            <section class="mb-6">
+                <h3 class="text-base font-bold text-gray-800 mb-2.5">Крепёжный элемент</h3>
+                <div class="flex gap-2.5 no-scrollbar w-full overflow-x-auto pb-2" id="fasteners-container"></div>
+            </section>
+
+            <section class="mb-6">
+                <div class="flex justify-between items-end mb-2.5">
+                    <h3 class="text-base font-bold text-gray-800" id="diameter-title">Диаметр шпильки <span class="text-gray-400 font-normal text-[11px] uppercase ml-1">ММ</span></h3>
+                    <span class="text-xs font-bold text-[#891E2B] cursor-pointer pr-1">Все</span>
+                </div>
+                <div class="flex gap-2 no-scrollbar w-full overflow-x-auto pb-2" id="diameters-container"></div>
+            </section>
+
+            <section class="mb-6">
+                <h3 class="text-base font-bold text-gray-800 mb-2.5">Глубина установки <span class="text-gray-400 font-normal text-[11px] uppercase ml-1">ММ</span></h3>
+                <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm p-4">
+                    <input type="number" id="depth-input" class="w-full text-2xl font-bold outline-none text-gray-800 bg-transparent mb-4" oninput="syncSlider(this.value); autoRecalculate();">
+                    <div class="px-1">
+                        <input type="range" id="depth-slider" min="50" max="1000" class="w-full relative z-10 block" oninput="syncInput(this.value); autoRecalculate();">
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-6">
+                <h3 class="text-base font-bold text-gray-800 mb-2.5">Диаметр бурения <span class="text-gray-400 font-normal text-[11px] uppercase ml-1">ММ</span></h3>
+                <div class="flex gap-2.5 w-full flex-wrap" id="drills-container"></div>
+            </section>
+
+            <section class="mb-8" id="dispensers-section">
+                <h3 class="text-base font-bold text-gray-800 mb-2.5">Дозатор</h3>
+                <div class="flex gap-2.5 no-scrollbar w-full overflow-x-auto pb-2" id="dispensers-container"></div>
+            </section>
+
+            <button onclick="performCalculation()" class="w-full bg-[#891E2B] text-white font-semibold text-[15px] py-4 rounded-2xl shadow-lg shadow-red-900/20 transition-transform active:scale-[0.98]">
+                Рассчитать
+            </button>
+        </div>
+    </div>
+
+    <div id="page-results" class="scrollable-content w-full absolute top-[60px] left-0 hidden bg-[#F8F9FA]">
+        <div class="max-w-md mx-auto p-4">
+            <h2 class="text-2xl font-black text-gray-900 mb-5">Расчет</h2>
+
+            <section class="mb-6">
+                <h3 class="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-2.5">Материалы</h3>
+                <div class="flex gap-2 no-scrollbar w-full overflow-x-auto pb-2">
+                    <div class="bg-white px-3.5 py-2.5 rounded-[12px] border border-gray-100 shadow-sm flex items-center gap-2 flex-shrink-0">
+                        <div class="w-5 h-5 bg-red-50 text-[#891E2B] rounded flex items-center justify-center"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg></div>
+                        <span class="text-xs font-bold text-gray-700" id="badge-anchor">HITRE 500</span>
+                    </div>
+                    <div class="bg-white px-3.5 py-2.5 rounded-[12px] border border-gray-100 shadow-sm flex items-center gap-2 flex-shrink-0">
+                        <div class="w-5 h-5 bg-amber-50 text-amber-700 rounded flex items-center justify-center"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></div>
+                        <span class="text-xs font-bold text-gray-700" id="badge-fastener">Шпилька M24</span>
+                    </div>
+                    <div class="bg-white px-3.5 py-2.5 rounded-[12px] border border-gray-100 shadow-sm flex items-center gap-2 flex-shrink-0">
+                        <div class="w-5 h-5 bg-blue-50 text-blue-700 rounded flex items-center justify-center"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg></div>
+                        <span class="text-xs font-bold text-gray-700" id="badge-dispenser">HDM 500</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-6">
+                <h3 class="text-[15px] font-bold text-gray-800 mb-2.5">Условия монтажа <span class="text-[#891E2B] text-[11px] font-normal ml-0.5">ⓘ</span></h3>
+                <div class="flex bg-white rounded-xl p-1 border border-gray-200 shadow-sm">
+                    <button id="cond-standard-btn" onclick="setCondition('standard')" class="flex-1 text-center py-2.5 rounded-lg text-sm text-gray-900 font-bold bg-gray-100 flex items-center justify-center gap-2 transition-all">
+                        <div class="w-4 h-4 rounded-full border-[4px] border-[#891E2B] bg-white shadow-sm"></div>
+                        Стандартные
+                    </button>
+                    <button id="cond-optimal-btn" onclick="setCondition('optimal')" class="flex-1 text-center py-2.5 rounded-lg text-sm text-gray-500 font-medium bg-transparent flex items-center justify-center gap-2 transition-all">
+                        <div class="w-4 h-4 rounded-full border border-gray-300 bg-white"></div>
+                        Оптимальные
+                    </button>
+                </div>
+            </section>
+
+            <section class="mb-6">
+                <h3 class="text-[15px] font-bold text-gray-800 mb-2.5">Количество креплений <span class="text-gray-400 font-normal text-[11px] uppercase ml-1">ШТ</span></h3>
+                <input type="number" id="count-input" value="100" class="w-full p-3.5 rounded-2xl border border-gray-200 shadow-sm font-bold outline-none text-lg text-gray-800 bg-white focus:border-[#891E2B]" oninput="calculate()">
+            </section>
+
+            <section class="mb-6">
+                <h3 class="text-[15px] font-bold text-gray-800 mb-2.5">Результаты</h3>
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div class="flex justify-between items-center p-4 border-b border-gray-100">
+                        <span class="text-gray-500 text-[13px] font-medium">Расход состава на крепление</span>
+                        <span class="font-extrabold text-lg text-gray-800"><span id="res-vol">0</span> мл</span>
+                    </div>
+                    <div class="flex justify-between items-center p-4">
+                        <span class="text-gray-500 text-[13px] font-medium">Количество капсул</span>
+                        <span class="font-extrabold text-lg text-gray-800"><span id="res-capsules">0</span> шт</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-8">
+                <h3 class="text-[15px] font-bold text-gray-800 mb-2.5">Параметры расчета</h3>
+                <div class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3.5 text-[13px] shadow-sm">
+                    <div class="flex justify-between items-center"><span class="text-gray-500">Химический анкер</span><span class="font-semibold text-gray-800" id="sum-anchor">HITRE 500 (585 мл)</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500">Тип крепления</span><span class="font-semibold text-gray-800" id="sum-fastener">Резьбовая шпилька / M24</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500">Глубина установки</span><span class="font-semibold text-gray-800"><span id="sum-depth">0</span> мм</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500">Диаметр бурения</span><span class="font-semibold text-gray-800"><span id="sum-hole">0</span> мм</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500">Дозатор</span><span class="font-semibold text-gray-800" id="sum-dispenser">Hilti HDM 500</span></div>
+                    
+                    <div id="dispenser-metrics-container" class="space-y-3.5"></div>
+                </div>
+            </section>
+
+            <div class="flex gap-2.5 mb-5">
+                <button onclick="goToInputPage()" class="w-[52px] h-[52px] flex-shrink-0 bg-white border border-gray-200 rounded-xl flex justify-center items-center text-gray-700 shadow-sm active:bg-gray-50">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                </button>
+                <button class="flex-1 bg-[#891E2B] text-white font-bold rounded-xl shadow-lg shadow-red-900/20 active:scale-[0.98] transition-transform">
+                    Оформить заказ
+                </button>
+                <button class="w-[52px] h-[52px] flex-shrink-0 bg-white border border-[#891E2B] rounded-xl flex justify-center items-center text-[#891E2B] shadow-sm active:bg-red-50">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                </button>
+            </div>
+            <div class="flex justify-between px-3 text-[#891E2B] font-bold text-[13px]">
+                <button onclick="resetCalculation()">Новый расчет</button>
+                <button>Поделиться</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // База данных: Сечения, Буры и Авто-глубины
+        const data = {
+            rod: [
+                { val: 'M8', nom: 8, drill: [10], A: 36.6, defDepth: 80 }, 
+                { val: 'M10', nom: 10, drill: [12], A: 58, defDepth: 90 },
+                { val: 'M12', nom: 12, drill: [14], A: 84.3, defDepth: 110 }, 
+                { val: 'M16', nom: 16, drill: [18], A: 157, defDepth: 125 },
+                { val: 'M20', nom: 20, drill: [22, 24], A: 245, defDepth: 170 }, 
+                { val: 'M24', nom: 24, drill: [26, 28], A: 353, defDepth: 210 },
+                { val: 'M27', nom: 27, drill: [30], A: 459, defDepth: 240 }, 
+                { val: 'M30', nom: 30, drill: [35], A: 561, defDepth: 270 },
+                { val: 'M33', nom: 33, drill: [37], A: 694, defDepth: 300 }, 
+                { val: 'M36', nom: 36, drill: [40], A: 817, defDepth: 330 },
+                { val: 'M39', nom: 39, drill: [42], A: 976, defDepth: 360 }
+            ],
+            rebar: [
+                { val: '8', nom: 8, drill: [10, 12], A: 50.3, defDepth: 80 }, 
+                { val: '10', nom: 10, drill: [12, 14], A: 78.5, defDepth: 90 },
+                { val: '12', nom: 12, drill: [14, 16], A: 113.1, defDepth: 110 }, 
+                { val: '14', nom: 14, drill: [18], A: 153.9, defDepth: 115 },
+                { val: '16', nom: 16, drill: [20], A: 201.1, defDepth: 125 }, 
+                { val: '18', nom: 18, drill: [22], A: 254.5, defDepth: 140 },
+                { val: '20', nom: 20, drill: [25], A: 314.2, defDepth: 170 }, 
+                { val: '22', nom: 22, drill: [28], A: 380.1, defDepth: 185 },
+                { val: '24', nom: 24, drill: [32], A: 452.4, defDepth: 210 }, 
+                { val: '25', nom: 25, drill: [32], A: 490.9, defDepth: 210 },
+                { val: '26', nom: 26, drill: [35], A: 530.9, defDepth: 240 }, 
+                { val: '28', nom: 28, drill: [35], A: 615.8, defDepth: 240 },
+                { val: '30', nom: 30, drill: [37], A: 706.9, defDepth: 270 }, 
+                { val: '32', nom: 32, drill: [40], A: 804.2, defDepth: 300 },
+                { val: '36', nom: 36, drill: [45], A: 1017.9, defDepth: 340 }, 
+                { val: '40', nom: 40, drill: [55], A: 1256.6, defDepth: 400 }
+            ]
+        };
+
+        let currentType = 'rod';
+        let activeDiameter = 'M24';
+        let activeDrill = 26;
+        let activeAnchor = '585';
+        let activeDispenser = 'HDM';
+        let currentCondition = 'standard';
+
+        // Формула чистого физического объема отверстия
+        function getVolumeFormula(type, d_nom, d_drill, depth, condition) {
+            let d_cut = d_drill;
+            let v_mr = 0, v_dd = 0, v_t = 0;
+
+         if (condition === 'standard') {
+    if (d_drill <= 10) d_cut += 0.2;
+    else if (d_drill <= 18) d_cut += 0.225;
+    else if (d_drill <= 30) d_cut += 0.25;
+    else d_cut += 0.325;
+
+    v_mr = 0.3 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+    v_dd = 0.1 * d_cut * Math.max(1, 0.01 * depth);
+    v_t = 0.00015 * Math.pow(d_cut, 3);
+
+} else {
+
+    if (d_drill <= 10) d_cut += 0.1;
+    else if (d_drill <= 18) d_cut += 0.12;
+    else if (d_drill <= 30) d_cut += 0.14;
+    else d_cut += 0.18;
+
+    v_mr = 0.12 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+    v_dd = 0.045 * d_cut * Math.max(1, 0.01 * depth);
+    v_t = 0.00007 * Math.pow(d_cut, 3);
+}
+
+            let v_h = 0.001 * (Math.PI / 4) * Math.pow(d_cut, 2) * depth;
+            const activeItem = data[type].find(d => d.val === activeDiameter);
+            let A = activeItem ? activeItem.A : (Math.PI / 4) * Math.pow(d_nom, 2);
+            let v_e = 0.001 * A * depth;
+
+            return Math.max(1, Math.round(v_h + v_mr + v_dd + v_t - v_e));
+        }
+
+        // Логика расчета для аккумуляторного дозатора Hilti HDE 500-A22 (Ступени 1-15, шаг 5 мл)
+        function calculateHDE(volume) {
+            let maxVolPerPull = 75; // Ступень 15 = 75 мл
+            let pulls = Math.ceil(volume / maxVolPerPull);
+            if (pulls === 0) pulls = 1;
+            let volPerPull = volume / pulls;
+            
+            let setting = Math.ceil(volPerPull / 5);
+            if (setting > 15) setting = 15;
+            if (setting < 1) setting = 1;
+
+            return { pulls: pulls, setting: setting };
+        }
+
+        // РЕНДЕРИНГ
+        function renderAnchors() {
+            const container = document.getElementById('anchors-container');
+            const items = [
+                { id: '585', title: 'HITRE 500', sub: '585 мл', svg: 'M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.656 48.656 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7' },
+                { id: '330', title: 'ICE 500', sub: '330 мл', svg: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                { id: '585_100', title: 'HITRE 100', sub: '585 мл', svg: 'M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7' }
+            ];
+            container.innerHTML = items.map(item => {
+                const isAct = item.id === activeAnchor;
+                return `<div onclick="setAnchor('${item.id}')" class="cursor-pointer flex-shrink-0 w-[108px] border-2 ${isAct ? 'border-[#891E2B]' : 'border-transparent'} rounded-2xl bg-white p-3 text-center transition-all shadow-sm">
+                    <div class="h-12 bg-gray-50 rounded-xl mb-2 flex items-center justify-center ${isAct ? 'text-[#891E2B]' : 'text-gray-300'}">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${item.svg}"></path></svg>
+                    </div>
+                    <div class="${isAct ? 'text-[#891E2B]' : 'text-gray-700'} text-[11px] font-bold uppercase tracking-wide">${item.title}</div>
+                    <div class="text-[10px] text-gray-400 font-medium mt-0.5">${item.sub}</div>
+                </div>`;
+            }).join('');
+        }
+        
+        function setAnchor(id) { 
+            activeAnchor = id; 
+            renderAnchors(); 
+            
+            // Если выбран ICE 500 (330 мл) — скрываем блок с выбором дозаторов. Он всегда только ручной.
+            const dispensersSection = document.getElementById('dispensers-section');
+            if (activeAnchor === '330') {
+                dispensersSection.style.display = 'none';
+            } else {
+                dispensersSection.style.display = 'block';
+                if (activeDispenser === 'HDM_330') activeDispenser = 'HDM'; // Сброс
+            }
+            
+            autoRecalculate(); 
+        }
+
+        function renderFasteners() {
+            const container = document.getElementById('fasteners-container');
+            const items = [
+                { id: 'rod', title: 'Резьбовая шпилька', sub: 'M8-M39', html: '<div class="w-6 h-1 bg-gray-400 rounded transform rotate-45"></div>' },
+                { id: 'rebar', title: 'Арматура', sub: '8-40 мм', html: '<div class="w-6 h-1.5 border-t border-b border-dashed border-gray-500 bg-gray-300 transform rotate-45"></div>' }
+            ];
+            container.innerHTML = items.map(item => {
+                const isAct = item.id === currentType;
+                return `<div onclick="changeFastenerType('${item.id}')" class="cursor-pointer flex-shrink-0 w-[170px] border-2 ${isAct ? 'border-[#891E2B]' : 'border-transparent'} rounded-2xl bg-white p-3 transition-all shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">${item.html}</div>
+                    <div>
+                        <div class="${isAct ? 'text-[#891E2B]' : 'text-gray-700'} text-[11px] font-bold">${item.title}</div>
+                        <div class="text-[10px] text-gray-400 font-medium mt-0.5">${item.sub}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function changeFastenerType(type) {
+            currentType = type;
+            activeDiameter = data[type].find(d => d.val === 'M24' || d.val === '20')?.val || data[type][0].val;
+            document.getElementById('diameter-title').innerHTML = type === 'rod' ? 'Диаметр шпильки <span class="text-gray-400 font-normal text-[11px] uppercase ml-1">ММ</span>' : 'Диаметр арматуры <span class="text-gray-400 font-normal text-[11px] uppercase ml-1">ММ</span>';
+            renderFasteners();
+            
+            // Автоподстановка глубины
+            const item = data[currentType].find(d => d.val === activeDiameter);
+            document.getElementById('depth-input').value = item.defDepth;
+            syncSlider(item.defDepth);
+            
+            renderDiameters();
+        }
+
+        function renderDiameters() {
+            const container = document.getElementById('diameters-container');
+            container.innerHTML = data[currentType].map(d => {
+                const isAct = d.val === activeDiameter;
+                return `<button onclick="setDiameter('${d.val}')" class="border ${isAct ? 'border-[#891E2B]' : 'border-gray-200'} rounded-[10px] bg-white px-5 py-2.5 transition-all shadow-sm flex-shrink-0 focus:outline-none">
+                    <span class="font-bold text-sm ${isAct ? 'text-[#891E2B]' : 'text-gray-700'}">${d.val}</span>
+                </button>`;
+            }).join('');
+            renderDrills();
+        }
+
+        function setDiameter(val) { 
+            activeDiameter = val; 
+            const item = data[currentType].find(d => d.val === val);
+            activeDrill = item.drill[0]; 
+            
+            document.getElementById('depth-input').value = item.defDepth;
+            syncSlider(item.defDepth);
+            
+            renderDiameters(); 
+            autoRecalculate();
+        }
+
+        function renderDrills() {
+            const container = document.getElementById('drills-container');
+            const item = data[currentType].find(d => d.val === activeDiameter);
+            container.innerHTML = item.drill.map(drill => {
+                const isAct = drill === activeDrill;
+                const w = item.drill.length === 1 ? 'w-full' : 'w-[48%]';
+                return `<button onclick="setDrill(${drill})" class="${w} border ${isAct ? 'border-[#891E2B]' : 'border-gray-200'} text-center rounded-[10px] bg-white p-3.5 font-bold text-sm transition-all shadow-sm focus:outline-none">
+                    <span class="${isAct ? 'text-[#891E2B]' : 'text-gray-700'}">${drill}</span>
+                </button>`;
+            }).join('');
+        }
+        function setDrill(val) { activeDrill = val; renderDrills(); autoRecalculate(); }
+
+        function renderDispensers() {
+            const container = document.getElementById('dispensers-container');
+            const items = [
+                { id: 'HDE', title: 'Hilti HDE 500', sub: 'Аккумуляторный', path: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                { id: 'HDM', title: 'Hilti HDM 500', sub: 'Ручной', path: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' }
+            ];
+            container.innerHTML = items.map(item => {
+                const isAct = item.id === activeDispenser;
+                return `<div onclick="setDispenser('${item.id}')" class="cursor-pointer flex-shrink-0 w-[170px] border-2 ${isAct ? 'border-[#891E2B]' : 'border-transparent'} rounded-2xl bg-white p-3 transition-all shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${item.path}"></path></svg>
+                    </div>
+                    <div>
+                        <div class="${isAct ? 'text-[#891E2B]' : 'text-gray-700'} text-[11px] font-bold">${item.title}</div>
+                        <div class="text-[10px] text-gray-400 font-medium mt-0.5">${item.sub}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        function setDispenser(id) { activeDispenser = id; renderDispensers(); autoRecalculate(); }
+
+        // ИНПУТЫ ПОЛЗУНКА С ГРАДИЕНТОМ
+        function syncSlider(val) { document.getElementById('depth-slider').value = val; updateSliderFill(val); }
+        function syncInput(val) { document.getElementById('depth-input').value = val; updateSliderFill(val); }
+        function updateSliderFill(val) {
+            const slider = document.getElementById('depth-slider');
+            const percentage = ((val - slider.min) / (slider.max - slider.min)) * 100;
+            slider.style.background = `linear-gradient(to right, #891E2B 0%, #891E2B ${percentage}%, #E5E7EB ${percentage}%, #E5E7EB 100%)`;
+        }
+
+        function setCondition(cond) {
+            currentCondition = cond;
+            const bStandard = document.getElementById('cond-standard-btn');
+            const bOptimal = document.getElementById('cond-optimal-btn');
+            const activeClass = "flex-1 text-center py-2.5 rounded-lg text-sm text-gray-900 font-bold bg-gray-100 flex items-center justify-center gap-2 transition-all";
+            const inactiveClass = "flex-1 text-center py-2.5 rounded-lg text-sm text-gray-500 font-medium bg-transparent flex items-center justify-center gap-2 transition-all";
+            
+            if(cond === 'standard') {
+                bStandard.className = activeClass; bStandard.innerHTML = '<div class="w-4 h-4 rounded-full border-[4px] border-[#891E2B] bg-white shadow-sm"></div>Стандартные';
+                bOptimal.className = inactiveClass; bOptimal.innerHTML = '<div class="w-4 h-4 rounded-full border border-gray-300 bg-white"></div>Оптимальные';
+            } else {
+                bOptimal.className = activeClass; bOptimal.innerHTML = '<div class="w-4 h-4 rounded-full border-[4px] border-[#891E2B] bg-white shadow-sm"></div>Оптимальные';
+                bStandard.className = inactiveClass; bStandard.innerHTML = '<div class="w-4 h-4 rounded-full border border-gray-300 bg-white"></div>Стандартные';
+            }
+            calculate();
+        }
+
+        // НАВИГАЦИЯ
+        function performCalculation() {
+            document.getElementById('page-input').classList.add('hidden');
+            const resPage = document.getElementById('page-results');
+            resPage.classList.remove('hidden');
+            resPage.classList.add('page-fade-in');
+            document.getElementById('header-back-btn').classList.remove('opacity-0', 'pointer-events-none');
+            resPage.scrollTo(0, 0);
+            calculate();
+        }
+
+        function goToInputPage() {
+            document.getElementById('page-results').classList.add('hidden');
+            const inpPage = document.getElementById('page-input');
+            inpPage.classList.remove('hidden');
+            inpPage.classList.add('page-fade-in');
+            document.getElementById('header-back-btn').classList.add('opacity-0', 'pointer-events-none');
+            inpPage.scrollTo(0, 0);
+        }
+
+        function resetCalculation() {
+            document.getElementById('count-input').value = 100;
+            setCondition('standard');
+            changeFastenerType('rod'); // Сброс на дефолтную М24
+            goToInputPage();
+        }
+
+        function autoRecalculate() {
+            if (!document.getElementById('page-results').classList.contains('hidden')) {
+                calculate();
+            }
+        }
+
+        // ЯДРО ВЫЧИСЛЕНИЙ
+        function calculate() {
+            const depth = parseFloat(document.getElementById('depth-input').value) || 0;
+            const count = parseInt(document.getElementById('count-input').value) || 0;
+            
+            let anchorVol = activeAnchor.startsWith('585') ? 585 : 330;
+            let anchorName = activeAnchor === '330' ? 'ICE 500' : (activeAnchor === '585_100' ? 'HITRE 100' : 'HITRE 500');
+
+            const activeData = data[currentType].find(d => d.val === activeDiameter);
+            
+            const volumePerAnchor = getVolumeFormula(currentType, activeData.nom, activeDrill, depth, currentCondition);
+
+            // Динамический вывод дозатора на экране результатов
+            let finalDispenserName = '';
+            const metricsContainer = document.getElementById('dispenser-metrics-container');
+            
+            if (activeAnchor === '330') {
+                // ICE 500 -> Только ручной HDM 330, параметры качков СРЫТЫ.
+                finalDispenserName = 'Hilti HDM 330';
+                metricsContainer.innerHTML = ''; 
+            } else if (activeDispenser === 'HDM') {
+                // Обычный ручной
+                finalDispenserName = 'Hilti HDM 500';
+                const strokes = Math.ceil(volumePerAnchor / 4.50);
+                metricsContainer.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 flex items-center gap-1">Кол-во качков <span class="text-[#891E2B] text-[10px]">ⓘ</span></span>
+                        <span class="font-semibold text-gray-800">${strokes}</span>
+                    </div>`;
+            } else {
+                // Аккумуляторный HDE
+                finalDispenserName = 'Hilti HDE 500-A22';
+                const hdeData = calculateHDE(volumePerAnchor);
+                metricsContainer.innerHTML = `
+                    <div class="flex justify-between items-center mb-3.5">
+                        <span class="text-gray-500 flex items-center gap-1">Колесо дозатора <span class="text-[#891E2B] text-[10px]">ⓘ</span></span>
+                        <span class="font-semibold text-gray-800">${hdeData.setting}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-500 flex items-center gap-1">Количество нажимов <span class="text-[#891E2B] text-[10px]">ⓘ</span></span>
+                        <span class="font-semibold text-gray-800">${hdeData.pulls} шт</span>
+                    </div>`;
+            }
+
+            // Итоговый расчет капсул
+            const totalVolume = volumePerAnchor * count;
+            const effectivePackVol = anchorVol === 585 ? 499 : 249;
+            const cartridges = totalVolume > 0 ? Math.ceil(totalVolume / effectivePackVol) : 0;
+
+            // Отрисовка
+            document.getElementById('res-vol').innerText = volumePerAnchor;
+            document.getElementById('res-capsules').innerText = cartridges;
+
+            document.getElementById('badge-anchor').innerText = anchorName;
+            document.getElementById('badge-fastener').innerText = (currentType === 'rod' ? 'Шпилька ' : 'Арматура ') + activeDiameter;
+            
+            // Если выбран ICE, заменяем бейдж HDM 500 на HDM 330
+            document.getElementById('badge-dispenser').innerText = activeAnchor === '330' ? 'HDM 330' : activeDispenser + ' 500';
+
+            document.getElementById('sum-anchor').innerText = `${anchorName} (${anchorVol} мл)`;
+            document.getElementById('sum-fastener').innerText = `${currentType === 'rod' ? 'Резьбовая шпилька' : 'Арматура'} / ${activeDiameter}`;
+            document.getElementById('sum-depth').innerText = depth;
+            document.getElementById('sum-hole').innerText = activeDrill;
+            document.getElementById('sum-dispenser').innerText = finalDispenserName;
+        }
+
+        // ЗАПУСК
+        const initialItem = data['rod'].find(d => d.val === 'M24');
+        document.getElementById('depth-input').value = initialItem.defDepth;
+        updateSliderFill(initialItem.defDepth);
+        
+        renderAnchors();
+        renderFasteners();
+        renderDiameters();
+        renderDispensers();
+    </script>
+</body>
+</html>
