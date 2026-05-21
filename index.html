@@ -275,7 +275,7 @@
         let activeDispenser = 'HDM';
         let currentCondition = 'standard';
 
-        // Универсальная формула объема с калибровкой под все анкеры и режимы
+        // Откалиброванная функция расчёта объема с учетом коэффициентов потерь из оригинального калькулятора
         function getVolumeFormula(type, d_nom, d_drill, depth, condition, isIce = false) {
             let d_cut = d_drill;
             let v_mr = 0, v_dd = 0, v_t = 0;
@@ -286,9 +286,9 @@
                 else if (d_drill <= 30) d_cut += 0.25;
                 else d_cut += 0.325;
 
-                v_mr = 0.3 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+                v_mr = 0.3036 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
                 const depthFactor = depth > 1000 ? Math.pow(depth / 1000, 0.12) : 1.0;
-                v_dd = 0.1087 * d_cut * (0.01 * depth) * depthFactor;
+                v_dd = 0.111 * d_cut * (0.01 * depth) * depthFactor;
                 v_t = 0.00015 * Math.pow(d_cut, 3);
             } else { // optimal
                 if (d_drill <= 10) d_cut += 0.1;
@@ -297,18 +297,17 @@
                 else d_cut += 0.18;
 
                 if (isIce) {
-                    // ICE 500 optimal – разные коэффициенты для шпильки и арматуры
                     if (type === 'rod') {
-                        v_mr = 0.10 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
-                        v_dd = 0.060 * d_cut * Math.max(1, 0.01 * depth);
+                        v_mr = 0.097 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+                        v_dd = 0.0618 * d_cut * Math.max(1, 0.01 * depth);
                     } else { // rebar
-                        v_mr = 0.13 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
-                        v_dd = 0.072 * d_cut * Math.max(1, 0.01 * depth);
+                        v_mr = 0.1234 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+                        v_dd = 0.0699 * d_cut * Math.max(1, 0.01 * depth);
                     }
                 } else {
-                    // HITRE 500/100 optimal
-                    v_mr = 0.12 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
-                    v_dd = 0.0447 * d_cut * Math.max(1, 0.01 * depth);
+                    v_mr = 0.1215 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+                    let dd_coef = type === 'rod' ? 0.0479 : 0.0515; 
+                    v_dd = dd_coef * d_cut * Math.max(1, 0.01 * depth);
                 }
                 v_t = 0.00007 * Math.pow(d_cut, 3);
             }
@@ -320,7 +319,6 @@
 
             let rawVolume = v_h + v_mr + v_dd + v_t - v_e;
 
-            // Поправка для ICE optimal rod на больших глубинах
             if (isIce && condition === 'optimal' && type === 'rod' && depth > 500) {
                 rawVolume *= Math.pow(depth / 500, -0.03);
             }
