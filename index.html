@@ -55,6 +55,21 @@
             -webkit-overflow-scrolling: touch;
             padding-bottom: 40px;
         }
+
+        /* Адаптация для ПК: убираем горизонтальную прокрутку, разрешаем перенос */
+        @media (min-width: 768px) {
+            .no-scrollbar {
+                overflow-x: visible !important;
+                flex-wrap: wrap !important;
+            }
+            .no-scrollbar > * {
+                flex-shrink: 1 !important;
+            }
+            #page-input .max-w-md,
+            #page-results .max-w-md {
+                max-width: 768px !important;
+            }
+        }
     </style>
 </head>
 <body class="text-gray-900 antialiased">
@@ -218,7 +233,7 @@
     </div>
 
     <script>
-        // База данных: Сечения, Буры и Авто-глубины
+        // База данных
         const data = {
             rod: [
                 { val: 'M8', nom: 8, drill: [10], A: 36.6, defDepth: 80 }, 
@@ -260,8 +275,8 @@
         let activeDispenser = 'HDM';
         let currentCondition = 'standard';
 
-        // Формула чистого физического объема отверстия
-        function getVolumeFormula(type, d_nom, d_drill, depth, condition) {
+        // Универсальная формула объема с калибровкой под все анкеры и режимы
+        function getVolumeFormula(type, d_nom, d_drill, depth, condition, isIce = false) {
             let d_cut = d_drill;
             let v_mr = 0, v_dd = 0, v_t = 0;
 
@@ -272,7 +287,6 @@
                 else d_cut += 0.325;
 
                 v_mr = 0.3 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
-                // Коррекция v_dd для глубин > 1000 мм (нелинейность)
                 const depthFactor = depth > 1000 ? Math.pow(depth / 1000, 0.12) : 1.0;
                 v_dd = 0.1087 * d_cut * (0.01 * depth) * depthFactor;
                 v_t = 0.00015 * Math.pow(d_cut, 3);
@@ -282,8 +296,20 @@
                 else if (d_drill <= 30) d_cut += 0.14;
                 else d_cut += 0.18;
 
-                v_mr = 0.12 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
-                v_dd = 0.0447 * d_cut * Math.max(1, 0.01 * depth);
+                if (isIce) {
+                    // ICE 500 optimal – разные коэффициенты для шпильки и арматуры
+                    if (type === 'rod') {
+                        v_mr = 0.10 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+                        v_dd = 0.060 * d_cut * Math.max(1, 0.01 * depth);
+                    } else { // rebar
+                        v_mr = 0.13 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+                        v_dd = 0.072 * d_cut * Math.max(1, 0.01 * depth);
+                    }
+                } else {
+                    // HITRE 500/100 optimal
+                    v_mr = 0.12 * (0.0008 * Math.pow(d_nom, 2) + 0.3 * d_nom - 2);
+                    v_dd = 0.0447 * d_cut * Math.max(1, 0.01 * depth);
+                }
                 v_t = 0.00007 * Math.pow(d_cut, 3);
             }
 
@@ -292,29 +318,33 @@
             let A = activeItem ? activeItem.A : (Math.PI / 4) * Math.pow(d_nom, 2);
             let v_e = 0.001 * A * depth;
 
-            return Math.max(1, Math.round(v_h + v_mr + v_dd + v_t - v_e));
+            let rawVolume = v_h + v_mr + v_dd + v_t - v_e;
+
+            // Поправка для ICE optimal rod на больших глубинах
+            if (isIce && condition === 'optimal' && type === 'rod' && depth > 500) {
+                rawVolume *= Math.pow(depth / 500, -0.03);
+            }
+
+            return Math.max(1, Math.round(rawVolume));
         }
 
-        // Логика расчета для аккумуляторного дозатора Hilti HDE 500-A22 (Ступени 1-15, шаг 5 мл)
         function calculateHDE(volume) {
-            let maxVolPerPull = 75; // Ступень 15 = 75 мл
+            let maxVolPerPull = 75;
             let pulls = Math.ceil(volume / maxVolPerPull);
             if (pulls === 0) pulls = 1;
             let volPerPull = volume / pulls;
-            
             let setting = Math.ceil(volPerPull / 5);
             if (setting > 15) setting = 15;
             if (setting < 1) setting = 1;
-
-            return { pulls: pulls, setting: setting };
+            return { pulls, setting };
         }
 
-        // РЕНДЕРИНГ
+        // Рендеринг и обработчики остаются без изменений
         function renderAnchors() {
             const container = document.getElementById('anchors-container');
             const items = [
                 { id: '585', title: 'HITRE 500', sub: '585 мл', svg: 'M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.656 48.656 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7' },
-                { id: '330', title: 'ICE 500', sub: '330 мл', svg: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                { id: '330', title: 'ICE 500', sub: '300 мл', svg: 'M13 10V3L4 14h7v7l9-11h-7z' },
                 { id: '585_100', title: 'HITRE 100', sub: '585 мл', svg: 'M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7' }
             ];
             container.innerHTML = items.map(item => {
@@ -332,16 +362,13 @@
         function setAnchor(id) { 
             activeAnchor = id; 
             renderAnchors(); 
-            
-            // Если выбран ICE 500 (330 мл) — скрываем блок с выбором дозаторов. Он всегда только ручной.
             const dispensersSection = document.getElementById('dispensers-section');
             if (activeAnchor === '330') {
                 dispensersSection.style.display = 'none';
             } else {
                 dispensersSection.style.display = 'block';
-                if (activeDispenser === 'HDM_330') activeDispenser = 'HDM'; // Сброс
+                if (activeDispenser === 'HDM_330') activeDispenser = 'HDM';
             }
-            
             autoRecalculate(); 
         }
 
@@ -368,12 +395,9 @@
             activeDiameter = data[type].find(d => d.val === 'M24' || d.val === '20')?.val || data[type][0].val;
             document.getElementById('diameter-title').innerHTML = type === 'rod' ? 'Диаметр шпильки <span class="text-gray-400 font-normal text-[11px] uppercase ml-1">ММ</span>' : 'Диаметр арматуры <span class="text-gray-400 font-normal text-[11px] uppercase ml-1">ММ</span>';
             renderFasteners();
-            
-            // Автоподстановка глубины
             const item = data[currentType].find(d => d.val === activeDiameter);
             document.getElementById('depth-input').value = item.defDepth;
             syncSlider(item.defDepth);
-            
             renderDiameters();
         }
 
@@ -392,10 +416,8 @@
             activeDiameter = val; 
             const item = data[currentType].find(d => d.val === val);
             activeDrill = item.drill[0]; 
-            
             document.getElementById('depth-input').value = item.defDepth;
             syncSlider(item.defDepth);
-            
             renderDiameters(); 
             autoRecalculate();
         }
@@ -434,7 +456,6 @@
         }
         function setDispenser(id) { activeDispenser = id; renderDispensers(); autoRecalculate(); }
 
-        // ИНПУТЫ ПОЛЗУНКА С ГРАДИЕНТОМ
         function syncSlider(val) { document.getElementById('depth-slider').value = val; updateSliderFill(val); }
         function syncInput(val) { document.getElementById('depth-input').value = val; updateSliderFill(val); }
         function updateSliderFill(val) {
@@ -449,7 +470,6 @@
             const bOptimal = document.getElementById('cond-optimal-btn');
             const activeClass = "flex-1 text-center py-2.5 rounded-lg text-sm text-gray-900 font-bold bg-gray-100 flex items-center justify-center gap-2 transition-all";
             const inactiveClass = "flex-1 text-center py-2.5 rounded-lg text-sm text-gray-500 font-medium bg-transparent flex items-center justify-center gap-2 transition-all";
-            
             if(cond === 'standard') {
                 bStandard.className = activeClass; bStandard.innerHTML = '<div class="w-4 h-4 rounded-full border-[4px] border-[#891E2B] bg-white shadow-sm"></div>Стандартные';
                 bOptimal.className = inactiveClass; bOptimal.innerHTML = '<div class="w-4 h-4 rounded-full border border-gray-300 bg-white"></div>Оптимальные';
@@ -460,7 +480,6 @@
             calculate();
         }
 
-        // НАВИГАЦИЯ
         function performCalculation() {
             document.getElementById('page-input').classList.add('hidden');
             const resPage = document.getElementById('page-results');
@@ -483,7 +502,7 @@
         function resetCalculation() {
             document.getElementById('count-input').value = 100;
             setCondition('standard');
-            changeFastenerType('rod'); // Сброс на дефолтную М24
+            changeFastenerType('rod');
             goToInputPage();
         }
 
@@ -493,28 +512,25 @@
             }
         }
 
-        // ЯДРО ВЫЧИСЛЕНИЙ
+        // Ядро вычислений
         function calculate() {
             const depth = parseFloat(document.getElementById('depth-input').value) || 0;
             const count = parseInt(document.getElementById('count-input').value) || 0;
             
-            let anchorVol = activeAnchor.startsWith('585') ? 585 : 330;
-            let anchorName = activeAnchor === '330' ? 'ICE 500' : (activeAnchor === '585_100' ? 'HITRE 100' : 'HITRE 500');
+            const isIce = activeAnchor === '330';
+            let anchorVol = isIce ? 300 : 585;
+            let anchorName = isIce ? 'ICE 500' : (activeAnchor === '585_100' ? 'HITRE 100' : 'HITRE 500');
 
             const activeData = data[currentType].find(d => d.val === activeDiameter);
-            
-            const volumePerAnchor = getVolumeFormula(currentType, activeData.nom, activeDrill, depth, currentCondition);
+            const volumePerAnchor = getVolumeFormula(currentType, activeData.nom, activeDrill, depth, currentCondition, isIce);
 
-            // Динамический вывод дозатора на экране результатов
             let finalDispenserName = '';
             const metricsContainer = document.getElementById('dispenser-metrics-container');
             
-            if (activeAnchor === '330') {
-                // ICE 500 -> Только ручной HDM 330, параметры качков СРЫТЫ.
-                finalDispenserName = 'Hilti HDM 330';
-                metricsContainer.innerHTML = ''; 
+            if (isIce) {
+                finalDispenserName = 'Hilti MD 1000';
+                metricsContainer.innerHTML = '';
             } else if (activeDispenser === 'HDM') {
-                // Обычный ручной
                 finalDispenserName = 'Hilti HDM 500';
                 const strokes = Math.ceil(volumePerAnchor / 4.50);
                 metricsContainer.innerHTML = `
@@ -523,7 +539,6 @@
                         <span class="font-semibold text-gray-800">${strokes}</span>
                     </div>`;
             } else {
-                // Аккумуляторный HDE
                 finalDispenserName = 'Hilti HDE 500-A22';
                 const hdeData = calculateHDE(volumePerAnchor);
                 metricsContainer.innerHTML = `
@@ -537,26 +552,20 @@
                     </div>`;
             }
 
-            // Итоговый расчет капсул
             const totalVolume = volumePerAnchor * count;
             let effectivePackVol;
-            if (anchorVol === 585) {
-                effectivePackVol = currentCondition === 'optimal' ? 526 : 480;
+            if (isIce) {
+                effectivePackVol = currentCondition === 'standard' ? 237.33 : 266;
             } else {
-                effectivePackVol = 237.33;
+                effectivePackVol = currentCondition === 'standard' ? 480 : 526;
             }
             const cartridges = totalVolume > 0 ? Math.ceil(totalVolume / effectivePackVol) : 0;
 
-            // Отрисовка
             document.getElementById('res-vol').innerText = volumePerAnchor;
             document.getElementById('res-capsules').innerText = cartridges;
-
             document.getElementById('badge-anchor').innerText = anchorName;
             document.getElementById('badge-fastener').innerText = (currentType === 'rod' ? 'Шпилька ' : 'Арматура ') + activeDiameter;
-            
-            // Если выбран ICE, заменяем бейдж HDM 500 на HDM 330
-            document.getElementById('badge-dispenser').innerText = activeAnchor === '330' ? 'HDM 330' : activeDispenser + ' 500';
-
+            document.getElementById('badge-dispenser').innerText = isIce ? 'MD 1000' : activeDispenser + ' 500';
             document.getElementById('sum-anchor').innerText = `${anchorName} (${anchorVol} мл)`;
             document.getElementById('sum-fastener').innerText = `${currentType === 'rod' ? 'Резьбовая шпилька' : 'Арматура'} / ${activeDiameter}`;
             document.getElementById('sum-depth').innerText = depth;
@@ -564,11 +573,10 @@
             document.getElementById('sum-dispenser').innerText = finalDispenserName;
         }
 
-        // ЗАПУСК
+        // Запуск
         const initialItem = data['rod'].find(d => d.val === 'M24');
         document.getElementById('depth-input').value = initialItem.defDepth;
         updateSliderFill(initialItem.defDepth);
-        
         renderAnchors();
         renderFasteners();
         renderDiameters();
