@@ -56,7 +56,7 @@
             padding-bottom: 40px;
         }
 
-        /* Адаптация для ПК: убираем горизонтальную прокрутку, разрешаем перенос */
+        /* Адаптация для ПК */
         @media (min-width: 768px) {
             .no-scrollbar {
                 overflow-x: visible !important;
@@ -233,38 +233,38 @@
     </div>
 
     <script>
-        // База данных
+        // Обновленная База данных UTECH (дефолтная глубина = диаметр * 10, скорректированные первые буры)
         const data = {
             rod: [
                 { val: 'M8', nom: 8, drill: [10], A: 36.6, defDepth: 80 }, 
-                { val: 'M10', nom: 10, drill: [12], A: 58, defDepth: 90 },
-                { val: 'M12', nom: 12, drill: [14], A: 84.3, defDepth: 110 }, 
-                { val: 'M16', nom: 16, drill: [18], A: 157, defDepth: 125 },
-                { val: 'M20', nom: 20, drill: [22, 24], A: 245, defDepth: 170 }, 
-                { val: 'M24', nom: 24, drill: [26, 28], A: 353, defDepth: 210 },
-                { val: 'M27', nom: 27, drill: [30], A: 459, defDepth: 240 }, 
-                { val: 'M30', nom: 30, drill: [35], A: 561, defDepth: 270 },
-                { val: 'M33', nom: 33, drill: [37], A: 694, defDepth: 300 }, 
+                { val: 'M10', nom: 10, drill: [12], A: 58, defDepth: 100 },
+                { val: 'M12', nom: 12, drill: [14], A: 84.3, defDepth: 120 }, 
+                { val: 'M16', nom: 16, drill: [18], A: 157, defDepth: 160 },
+                { val: 'M20', nom: 20, drill: [22, 24], A: 245, defDepth: 200 }, 
+                { val: 'M24', nom: 24, drill: [26, 28], A: 353, defDepth: 240 },
+                { val: 'M27', nom: 27, drill: [30], A: 459, defDepth: 270 }, 
+                { val: 'M30', nom: 30, drill: [35], A: 561, defDepth: 300 },
+                { val: 'M33', nom: 33, drill: [37], A: 694, defDepth: 330 }, 
                 { val: 'M36', nom: 36, drill: [40], A: 817, defDepth: 360 },
                 { val: 'M39', nom: 39, drill: [42], A: 976, defDepth: 390 }
             ],
             rebar: [
-                { val: '8', nom: 8, drill: [10, 12], A: 50.3, defDepth: 80 }, 
-                { val: '10', nom: 10, drill: [12, 14], A: 78.5, defDepth: 90 },
-                { val: '12', nom: 12, drill: [14, 16], A: 113.1, defDepth: 110 }, 
-                { val: '14', nom: 14, drill: [18], A: 153.9, defDepth: 115 },
-                { val: '16', nom: 16, drill: [20], A: 201.1, defDepth: 125 }, 
-                { val: '18', nom: 18, drill: [22], A: 254.5, defDepth: 140 },
-                { val: '20', nom: 20, drill: [25], A: 314.2, defDepth: 170 }, 
-                { val: '22', nom: 22, drill: [28], A: 380.1, defDepth: 185 },
-                { val: '24', nom: 24, drill: [32], A: 452.4, defDepth: 210 }, 
-                { val: '25', nom: 25, drill: [32], A: 490.9, defDepth: 210 },
-                { val: '26', nom: 26, drill: [35], A: 530.9, defDepth: 240 }, 
-                { val: '28', nom: 28, drill: [35], A: 615.8, defDepth: 240 },
-                { val: '30', nom: 30, drill: [37], A: 706.9, defDepth: 270 }, 
-                { val: '32', nom: 32, drill: [40], A: 804.2, defDepth: 300 },
-                { val: '36', nom: 36, drill: [45], A: 1017.9, defDepth: 340 }, 
-                { val: '40', nom: 40, drill: [55], A: 1256.6, defDepth: 400 }
+                { val: '8', nom: 8, drill: [12, 10], A: 50.3, defDepth: 80 }, 
+                { val: '10', nom: 10, drill: [14, 12], A: 78.5, defDepth: 100 },
+                { val: '12', nom: 12, drill: [16, 14], A: 113.1, defDepth: 120 }, 
+                { val: '14', nom: 14, drill: [18], A: 153.9, defDepth: 140 },
+                { val: '16', nom: 16, drill: [20], A: 201.1, defDepth: 160 }, 
+                { val: '18', nom: 18, drill: [22], A: 254.5, defDepth: 180 },
+                { val: '20', nom: 20, drill: [25], A: 314.2, defDepth: 200 }, 
+                { val: '22', nom: 22, drill: [28], A: 380.1, defDepth: 220 },
+                { val: '24', nom: 24, drill: [32, 30], A: 452.4, defDepth: 240 }, 
+                { val: '25', nom: 25, drill: [30, 32], A: 490.9, defDepth: 250 },
+                { val: '26', nom: 26, drill: [35], A: 530.9, defDepth: 260 }, 
+                { val: '28', nom: 28, drill: [35], A: 615.8, defDepth: 280 },
+                { val: '30', nom: 30, drill: [37], A: 706.9, defDepth: 300 }, 
+                { val: '32', nom: 32, drill: [40], A: 804.2, defDepth: 320 },
+                { val: '36', nom: 36, drill: [45, 47], A: 1017.9, defDepth: 360 }, 
+                { val: '40', nom: 40, drill: [52, 55], A: 1256.6, defDepth: 400 }
             ]
         };
 
@@ -337,7 +337,6 @@
             return { pulls, setting };
         }
 
-        // Рендеринг и обработчики остаются без изменений
         function renderAnchors() {
             const container = document.getElementById('anchors-container');
             const items = [
