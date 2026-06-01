@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru" class="h-full w-full overflow-hidden select-none">
 <head>
     <meta charset="UTF-8">
@@ -163,7 +163,7 @@
                     </div>
                     <div class="bg-white px-3.5 py-2.5 rounded-[12px] border border-gray-100 shadow-sm flex items-center gap-2 flex-shrink-0">
                         <div class="w-5 h-5 bg-blue-50 text-blue-700 rounded flex items-center justify-center"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg></div>
-                        <span class="text-xs font-bold text-gray-700" id="badge-dispenser">HDM 500</span>
+                        <span class="text-xs font-bold text-gray-700" id="badge-dispenser">Ручной</span>
                     </div>
                 </div>
             </section>
@@ -208,7 +208,7 @@
                     <div class="flex justify-between items-center"><span class="text-gray-500">Тип крепления</span><span class="font-semibold text-gray-800" id="sum-fastener">Резьбовая шпилька / M24</span></div>
                     <div class="flex justify-between items-center"><span class="text-gray-500">Глубина установки</span><span class="font-semibold text-gray-800"><span id="sum-depth">0</span> мм</span></div>
                     <div class="flex justify-between items-center"><span class="text-gray-500">Диаметр бурения</span><span class="font-semibold text-gray-800"><span id="sum-hole">0</span> мм</span></div>
-                    <div class="flex justify-between items-center"><span class="text-gray-500">Дозатор</span><span class="font-semibold text-gray-800" id="sum-dispenser">HDM 500</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-500">Дозатор</span><span class="font-semibold text-gray-800" id="sum-dispenser">Ручной</span></div>
                     
                     <div id="dispenser-metrics-container" class="space-y-3.5"></div>
                 </div>
@@ -435,8 +435,8 @@
         function renderDispensers() {
             const container = document.getElementById('dispensers-container');
             const items = [
-                { id: 'HDE', title: 'HDE 500', sub: 'Аккумуляторный', path: 'M13 10V3L4 14h7v7l9-11h-7z' },
-                { id: 'HDM', title: 'HDM 500', sub: 'Ручной', path: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' }
+                { id: 'HDE', title: 'Аккумуляторный', sub: 'Дозатор', path: 'M13 10V3L4 14h7v7l9-11h-7z' },
+                { id: 'HDM', title: 'Ручной', sub: 'Дозатор', path: 'M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4' }
             ];
             container.innerHTML = items.map(item => {
                 const isAct = item.id === activeDispenser;
@@ -525,10 +525,10 @@
             const metricsContainer = document.getElementById('dispenser-metrics-container');
             
             if (isIce) {
-                finalDispenserName = 'MD 1000';
+                finalDispenserName = 'Ручной';
                 metricsContainer.innerHTML = '';
             } else if (activeDispenser === 'HDM') {
-                finalDispenserName = 'HDM 500';
+                finalDispenserName = 'Ручной';
                 const strokes = Math.ceil(volumePerAnchor / 4.50);
                 metricsContainer.innerHTML = `
                     <div class="flex justify-between items-center">
@@ -536,7 +536,7 @@
                         <span class="font-semibold text-gray-800">${strokes}</span>
                     </div>`;
             } else {
-                finalDispenserName = 'HDE 500-A22';
+                finalDispenserName = 'Аккумуляторный';
                 const hdeData = calculateHDE(volumePerAnchor);
                 metricsContainer.innerHTML = `
                     <div class="flex justify-between items-center mb-3.5">
@@ -562,7 +562,7 @@
             document.getElementById('res-capsules').innerText = cartridges;
             document.getElementById('badge-anchor').innerText = anchorName;
             document.getElementById('badge-fastener').innerText = (currentType === 'rod' ? 'Шпилька ' : 'Арматура ') + activeDiameter;
-            document.getElementById('badge-dispenser').innerText = isIce ? 'MD 1000' : activeDispenser + ' 500';
+            document.getElementById('badge-dispenser').innerText = isIce ? 'Ручной' : (activeDispenser === 'HDM' ? 'Ручной' : 'Аккумуляторный');
             document.getElementById('sum-anchor').innerText = `${anchorName} (${anchorVol} мл)`;
             document.getElementById('sum-fastener').innerText = `${currentType === 'rod' ? 'Резьбовая шпилька' : 'Арматура'} / ${activeDiameter}`;
             document.getElementById('sum-depth').innerText = depth;
